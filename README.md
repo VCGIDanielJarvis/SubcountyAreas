@@ -8,7 +8,7 @@ by step.
 ## 1. Purpose
 
 Aggregates census tracts into "subcounty areas" — a geography coarser than a tract, finer
-than a county — using only two neutral signals: total population and a residential
+than a county — using only two signals: total population and a residential
 clustering pattern (`MaxDiffK`, §3). Anchoring on those rather than on any specific social
 or economic indicator keeps the result usable as a general-purpose geography.
 
