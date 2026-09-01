@@ -34,8 +34,9 @@ python SubcountyAreas.py
 As shipped, both data sources default to Vermont (VCGI's 2020 census tract layer and E911
 site/structure layer) — the merge logic itself is not Vermont-specific. To aggregate a
 different state, edit `TRACT_SERVICE_URL`/`RESIDENTIAL_SITES_SERVICE_URL`, their matching
-field names, `PROJECTED_CRS_EPSG`, and likely `NEIGHBORHOOD_DISTANCES_METERS` and
-`AGGREGATION_TARGET_COUNTS` (§4.1), since the last two were tuned to Vermont's scale.
+field names, `PROJECTED_CRS_EPSG`, `NEIGHBORHOOD_DISTANCES_METERS` if you would like a 
+different definition for what a neighborhood range is, and `AGGREGATION_TARGET_COUNTS` (§4.1), 
+since the last two were tuned to Vermont's scale.
 
 Output lands at `~/Desktop/SubcountyAreas/SubcountyAreas.gpkg`, with a merge log at
 `~/Desktop/SubcountyAreas/SubcountyAreas_MergeDiagnostics.csv`.
