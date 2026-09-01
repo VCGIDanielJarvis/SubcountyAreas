@@ -196,7 +196,7 @@ round.
 | `TRACT_POPULATION_FIELD` | `"P0010001"` | Total-population field on that tract source. |
 | `TRACT_ID_FIELD` / `COUNTY_FIELD` | `"TRACT"` / `"COUNTY"` | Source field names expected on the tract source. |
 | `COUNTY_MODES` | `["Counties", "NoCounties"]` | Whether merges may cross county lines. |
-| `AGGREGATION_TARGET_COUNTS` | `[60, 89, 100, 107, 150]` | Area counts at which a snapshot is taken; the loop stops at `min(...)` (or stalls first — §3.5). |
+| `AGGREGATION_TARGET_COUNTS` | `[60, 100, 150]` | Area counts at which a snapshot is taken; the loop stops at `min(...)` (or stalls first — §3.5). |
 | `PROJECTED_CRS_EPSG` | `32145` (Vermont State Plane) | Every download is reprojected here so distance/area/perimeter math is in real meters. |
 | `NEIGHBORHOOD_DISTANCES_METERS` | `[500, 1000, 1500, 2000, 2500, 3000]` | The six Ripley's K distances tested per area. |
 
