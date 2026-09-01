@@ -53,7 +53,7 @@ Output lands at `~/Desktop/SubcountyAreas/SubcountyAreas.gpkg`, with a merge log
 | 2. `MaxDiffK` per tract | Weighted Ripley's K/L across six distances (500–3000 m), collapsed to whichever value deviates furthest from pure randomness (sign included). | Raw density mostly just reflects how a tract was originally drawn (tracts equalize population, not area). Ripley's K measures clustering independent of that. |
 | 3. Merge loop | Each round: find every touching pair, rank by combined population + `MaxDiffK` similarity, merge the current lowest-population area with its best-ranked own neighbor. | Guarantees the population floor is addressed every round. Ranking pairs map-wide, rather than normalizing each pair's difference by the map-wide total, means one extreme pair elsewhere on the map can't inflate the shared denominator and shrink every other pair's normalized score toward zero. |
 | 4. Crosswalk | Track original tract → current area ID, updated on every merge. | Lets any tract-level statistic be re-aggregated later from source data. |
-| 5. Snapshot | Save area boundaries + crosswalk whenever the area count matches a target. | Produces several aggregation levels instead of one fixed answer. |
+| 5. Snapshot | Save area boundaries + crosswalk whenever the area count matches a target. | Produces several aggregation levels. |
 | 6. Diagnostics | Log each merge's population/clustering difference and where it ranked against every pair available that round. | Makes the cost of seeding on population (occasionally forcing a mediocre `MaxDiffK` match) directly measurable. |
 
 ---
