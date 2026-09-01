@@ -35,7 +35,7 @@ As shipped, both data sources default to Vermont (VCGI's 2020 census tract layer
 site/structure layer) — the merge logic itself is not Vermont-specific. To aggregate a
 different state, edit `TRACT_SERVICE_URL`/`RESIDENTIAL_SITES_SERVICE_URL`, their matching
 field names, `PROJECTED_CRS_EPSG`, `NEIGHBORHOOD_DISTANCES_METERS` if you would like a 
-different definition for what a neighborhood range is, and `AGGREGATION_TARGET_COUNTS` (§4.1), 
+different definition for what a neighborhood range is, and `AGGREGATION_TARGET_COUNTS`, 
 since the last two were tuned to Vermont's scale.
 
 Output lands at `~/Desktop/SubcountyAreas/SubcountyAreas.gpkg`, with a merge log at
@@ -179,77 +179,3 @@ Percentile rather than a fixed threshold keeps this meaningful round to round, s
 counts as a "big" difference varies with how similar the whole map happens to be that
 round.
 
----
-
-## 4. Reference
-
-### 4.1 Configuration
-
-| Constant | Value | Meaning |
-|---|---|---|
-| `OUTPUT_GEOPACKAGE_PATH` | `~/Desktop/SubcountyAreas/SubcountyAreas.gpkg` | Every snapshot from every run is a separate layer/table inside this one file. |
-| `MERGE_DIAGNOSTICS_CSV_PATH` | `~/Desktop/SubcountyAreas/SubcountyAreas_MergeDiagnostics.csv` | One row per merge, across both county modes. |
-| `RESIDENTIAL_SITES_SERVICE_URL` | Vermont E911 site/structure points | Every residential structure location statewide. |
-| `RESIDENTIAL_CATEGORY_FIELD` / `RESIDENTIAL_CATEGORY_VALUE` | `"Category"` / `"Residential"` | Filters the site layer down to residential structures only. |
-| `RESIDENTIAL_UNIT_COUNT_FIELD` | `"ResUnitCnt"` | Per-site weight used in `MaxDiffK`; `NaN`/`0` treated as `1`. |
-| `TRACT_SERVICE_URL` | Vermont 2020 census tract polygons | The single tract source this run aggregates. |
-| `TRACT_POPULATION_FIELD` | `"P0010001"` | Total-population field on that tract source. |
-| `TRACT_ID_FIELD` / `COUNTY_FIELD` | `"TRACT"` / `"COUNTY"` | Source field names expected on the tract source. |
-| `COUNTY_MODES` | `["Counties", "NoCounties"]` | Whether merges may cross county lines. |
-| `AGGREGATION_TARGET_COUNTS` | `[60, 100, 150]` | Area counts at which a snapshot is taken; the loop stops at `min(...)` (or stalls first — §3.5). |
-| `PROJECTED_CRS_EPSG` | `32145` (Vermont State Plane) | Every download is reprojected here so distance/area/perimeter math is in real meters. |
-| `NEIGHBORHOOD_DISTANCES_METERS` | `[500, 1000, 1500, 2000, 2500, 3000]` | The six Ripley's K distances tested per area. |
-
-### 4.2 Module layout
-
-```
-SubcountyAreas.py
-├── CONFIGURATION           service URLs, output paths, tunable constants
-├── RECORD TYPES            SubcountyArea, MergeCandidate, ResidentialSites (dataclasses)
-├── DATA ACCESS             fetch_feature_server_as_geodataframe, prepare_datasets,
-│                           points_within_polygon
-├── RESIDENTIAL-STRUCTURE PATTERN MEASURE
-│   └── compute_max_diff_k()                the Ripley's K/L statistic (§3.2)
-├── HIERARCHICAL MERGE
-│   ├── find_touching_area_pairs()
-│   ├── rank_candidates_by_similarity()     rank-based scoring (§3.3)
-│   ├── select_lowest_population_seed()
-│   ├── build_initial_areas_and_crosswalk()
-│   ├── save_snapshot()
-│   ├── build_merge_diagnostic_record()     §3.6
-│   ├── combine_county_values()
-│   ├── apply_merge()
-│   └── run_hierarchical_merge()            the per-county-mode merge loop
-└── MAIN
-    └── main()                              fetch → baseline MaxDiffK → BaseTracts →
-                                             merge runs → diagnostics CSV
-```
-
-`run_hierarchical_merge(tract_geodata, county_mode, residential_sites)` returns the list of
-per-merge diagnostic records for that one county mode; `main()` concatenates both modes'
-lists before writing the CSV.
-
----
-
-## 5. Validation
-
-### 5.1 Population equalization
-
-To check the seed-first rule (§3.3) is equalizing population sensibly for a given run:
-
-1. Pull cluster populations at each target count and compute the coefficient of variation
-   (CV = SD/mean). A seed-first rule should keep this flat or improving as aggregation
-   proceeds, since every round is forced to address whichever area is currently smallest.
-2. Confirm no area is left stranded at a near-zero population at any target count, in
-   either county mode.
-3. Compare against a Monte Carlo null: random partitions of the original tract populations,
-   constrained to the same cluster-size structure the algorithm actually produced (same
-   number of clusters, same tracts-per-cluster). A working seed-first rule should
-   consistently outperform this null.
-
-The `MaxDiffK` trade-off this rule makes — occasionally forcing a seed into a mediocre
-match when that's the only neighbor available — isn't a one-time finding; it's measured on
-every run via `clustering_difference_percentile` in `SubcountyAreas_MergeDiagnostics.csv`
-(§3.6). Aggregating that column (e.g. what fraction of merges landed above the 75th or 90th
-percentile of map-wide match quality) gives a concrete, run-specific answer to how often,
-and how badly, a seed was forced into a poor match.
