@@ -87,7 +87,8 @@ diffK(d) = L(d) - d       # 0 under CSR; >0 clustered, <0 dispersed
 
 `diffK` is evaluated at six distances (`NEIGHBORHOOD_DISTANCES_METERS`), and whichever
 single value has the largest magnitude (sign kept) becomes `MaxDiffK`. Areas with fewer
-than 3 residential sites return `0.0`.
+than 3 residential sites return `0.0`. In practice, this will only trip in tracts that 
+are strange, like airports. No residents present.
 
 **Edge correction — plus sampling.** Counting neighbors only inside the tract would
 undercount points near the boundary. Instead:
