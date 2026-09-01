@@ -6,7 +6,7 @@
 
 Aggregates census tracts into "subcounty areas" — a geography coarser than a tract, finer
 than a county — using only two signals: total population and a residential
-clustering pattern (`MaxDiffK`, §3). Anchoring on those rather than on any specific social
+clustering pattern (`MaxDiffK` - based on Ripley's K, §3). Anchoring on those rather than on any specific social
 or economic indicator keeps the result usable as a general-purpose geography.
 
 Starting from every original tract, the script repeatedly merges the current
