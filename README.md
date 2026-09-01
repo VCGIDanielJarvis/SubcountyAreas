@@ -1,8 +1,5 @@
 # Subcounty Areas — Technical Documentation
 
-Companion reference for `SubcountyAreas.py`. Explains what the script does and why, step
-by step.
-
 ---
 
 ## 1. Purpose
