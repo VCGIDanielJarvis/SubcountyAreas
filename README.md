@@ -233,27 +233,7 @@ lists before writing the CSV.
 
 ## 5. Validation
 
-### 5.1 `MaxDiffK` sanity checks
-
-Synthetic checks (no network access): uniform-random points surrounded by a matching-density
-exterior center near 0 across repeated draws; a tight synthetic cluster produces a strongly
-positive value. Both confirm the statistic reads "no pattern" and "clustered" correctly.
-
-Real-data spot check, three representative Vermont tracts (smallest, largest, and
-northernmost by centroid):
-
-![Validation results](images/validation_results.png)
-
-| Tract | Residential sites | `MaxDiffK` |
-|---|---|---|
-| 004100 (smallest, densest) | 278 | 562.36 |
-| 950100 (largest, rural) | 2541 | 2485.02 |
-| 010101 (VT/Canada border) | 1762 | 830.76 |
-
-All three are sane, non-zero, and correctly signed — including the smallest/densest tract,
-which has the least favorable geometry for edge correction (§3.2).
-
-### 5.2 Population equalization
+### 5.1 Population equalization
 
 To check the seed-first rule (§3.3) is equalizing population sensibly for a given run:
 
