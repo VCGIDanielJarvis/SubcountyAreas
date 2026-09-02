@@ -1,10 +1,10 @@
 """
-Subcounty Areas
+Census Tract Aggregation
 
 Requires: geopandas, shapely, pyproj, requests, scipy, numpy, pandas
     pip install geopandas shapely pyproj requests scipy numpy pandas
 
-Groups census tracts into "subcounty areas" - a geography coarser than a tract, finer
+Groups census tracts into "census tract aggregations" - a geography coarser than a tract, finer
 than a county - by repeatedly merging the CURRENT LOWEST-POPULATION area into its
 most-similar touching neighbor - similarity judged on both population and
 residential-structure pattern (see step 2) - until reaching each target count in
@@ -131,10 +131,10 @@ from scipy.stats import rankdata
 # -----------------------------------------------------------------------------
 
 OUTPUT_GEOPACKAGE_PATH = os.path.join(
-    os.path.expanduser("~"), "Desktop", "SubcountyAreas", "SubcountyAreas.gpkg"
+    os.path.expanduser("~"), "Desktop", "CensusTractAggregations", "CensusTractAggregations.gpkg"
 )
 MERGE_DIAGNOSTICS_CSV_PATH = os.path.join(
-    os.path.expanduser("~"), "Desktop", "SubcountyAreas", "SubcountyAreas_MergeDiagnostics.csv"
+    os.path.expanduser("~"), "Desktop", "CensusTractAggregations", "CensusTractAggregations_MergeDiagnostics.csv"
 )
 
 # Every residential structure location statewide. Defaults to Vermont's E911
@@ -203,7 +203,7 @@ NEIGHBORHOOD_DISTANCES_METERS = [500, 1000, 1500, 2000, 2500, 3000]
 # -----------------------------------------------------------------------------
 
 @dataclass
-class SubcountyArea:
+class CensusTractAggregation:
     """One current area on the map - either an original tract, or a merged
     cluster of tracts, at some point during the hierarchical merge."""
     cluster_id: str
@@ -381,14 +381,14 @@ def compute_max_diff_k(residential_sites: ResidentialSites, polygon: shapely.Geo
 # -----------------------------------------------------------------------------
 
 def find_touching_area_pairs(
-    subcounty_areas: dict[str, SubcountyArea], county_mode: str
+    census_tract_aggregations: dict[str, CensusTractAggregation], county_mode: str
 ) -> list[MergeCandidate]:
-    """Every pair of currently-touching subcounty areas, paired with how
+    """Every pair of currently-touching census tract aggregations, paired with how
     different they are in population and in clustering signature. Uses an
     in-memory spatial index (STRtree), so this is a direct geometry query
     rather than a repeated call out to an external geoprocessing tool."""
-    area_ids = list(subcounty_areas.keys())
-    area_geometries = [subcounty_areas[area_id].shape for area_id in area_ids]
+    area_ids = list(census_tract_aggregations.keys())
+    area_geometries = [census_tract_aggregations[area_id].shape for area_id in area_ids]
     area_spatial_index = shapely.STRtree(area_geometries)
 
     candidate_pairs = []
@@ -400,7 +400,7 @@ def find_touching_area_pairs(
             if neighbor_area_id == area_id:
                 continue
             if county_mode == COUNTY_CONSTRAINED_MODE and (
-                subcounty_areas[area_id].county != subcounty_areas[neighbor_area_id].county
+                census_tract_aggregations[area_id].county != census_tract_aggregations[neighbor_area_id].county
             ):
                 continue
 
@@ -409,7 +409,7 @@ def find_touching_area_pairs(
                 continue
             pairs_already_found.add(pair_key)
 
-            area_a, area_b = subcounty_areas[pair_key[0]], subcounty_areas[pair_key[1]]
+            area_a, area_b = census_tract_aggregations[pair_key[0]], census_tract_aggregations[pair_key[1]]
             candidate_pairs.append(
                 MergeCandidate(
                     area_id_a=pair_key[0],
@@ -443,20 +443,20 @@ def rank_candidates_by_similarity(candidate_pairs: list[MergeCandidate]) -> list
 
 
 def select_lowest_population_seed(
-    subcounty_areas: dict[str, SubcountyArea], areas_with_candidate_pairs: set[str]
+    census_tract_aggregations: dict[str, CensusTractAggregation], areas_with_candidate_pairs: set[str]
 ) -> str:
     """The current lowest-population area, considering only areas that have at
     least one viable touching neighbor this round. An isolated area (no
     same-mode neighbor) is skipped for THIS round only - there is no
     persistent exclusion list, so it is reconsidered fresh every round."""
-    viable_area_ids = [area_id for area_id in subcounty_areas if area_id in areas_with_candidate_pairs]
-    return min(viable_area_ids, key=lambda area_id: subcounty_areas[area_id].population)
+    viable_area_ids = [area_id for area_id in census_tract_aggregations if area_id in areas_with_candidate_pairs]
+    return min(viable_area_ids, key=lambda area_id: census_tract_aggregations[area_id].population)
 
 
 def build_initial_areas_and_crosswalk(
     tract_geodata: gpd.GeoDataFrame,
-) -> tuple[dict[str, SubcountyArea], pd.DataFrame]:
-    """One SubcountyArea per original tract, and a matching identity crosswalk
+) -> tuple[dict[str, CensusTractAggregation], pd.DataFrame]:
+    """One CensusTractAggregation per original tract, and a matching identity crosswalk
     (every tract mapped to itself) - the starting point every hierarchical merge
     run is built from, and also what gets saved directly as the "BaseTracts"
     snapshot before any merging happens."""
@@ -465,8 +465,8 @@ def build_initial_areas_and_crosswalk(
         "ClusterID": tract_geodata[TRACT_ID_FIELD].astype(str),
     })
 
-    subcounty_areas: dict[str, SubcountyArea] = {
-        str(tract_row[TRACT_ID_FIELD]): SubcountyArea(
+    census_tract_aggregations: dict[str, CensusTractAggregation] = {
+        str(tract_row[TRACT_ID_FIELD]): CensusTractAggregation(
             cluster_id=str(tract_row[TRACT_ID_FIELD]),
             shape=tract_row.geometry,
             population=int(tract_row[TRACT_POPULATION_FIELD])
@@ -477,16 +477,16 @@ def build_initial_areas_and_crosswalk(
         )
         for _, tract_row in tract_geodata.iterrows()
     }
-    return subcounty_areas, tract_crosswalk
+    return census_tract_aggregations, tract_crosswalk
 
 
 def save_snapshot(
-    subcounty_areas: dict[str, SubcountyArea],
+    census_tract_aggregations: dict[str, CensusTractAggregation],
     tract_crosswalk: pd.DataFrame,
     layer_name: str,
     coordinate_reference_system,
 ) -> None:
-    """Save both the current subcounty area map AND its crosswalk to original
+    """Save both the current census tract aggregation map AND its crosswalk to original
     tracts, as two layers/tables in the same GeoPackage file."""
     snapshot_geodata = gpd.GeoDataFrame(
         [
@@ -496,9 +496,9 @@ def save_snapshot(
                 COUNTY_FIELD: area.county,
                 "MaxDiffK": area.max_diff_k,
             }
-            for area in subcounty_areas.values()
+            for area in census_tract_aggregations.values()
         ],
-        geometry=[area.shape for area in subcounty_areas.values()],
+        geometry=[area.shape for area in census_tract_aggregations.values()],
         crs=coordinate_reference_system,
     )
     snapshot_geodata.to_file(OUTPUT_GEOPACKAGE_PATH, layer=layer_name, driver="GPKG", mode="w")
@@ -555,7 +555,7 @@ def combine_county_values(county_a: str, county_b: str) -> str:
 
 
 def apply_merge(
-    subcounty_areas: dict[str, SubcountyArea],
+    census_tract_aggregations: dict[str, CensusTractAggregation],
     tract_crosswalk: pd.DataFrame,
     chosen_candidate: MergeCandidate,
     merged_shape: shapely.Geometry,
@@ -563,11 +563,11 @@ def apply_merge(
 ) -> None:
     """Fold chosen_candidate's two areas into one: point every original tract
     that belonged to either of them at the crosswalk to the merged cluster ID,
-    remove the two input areas from subcounty_areas, and add the merged area
+    remove the two input areas from census_tract_aggregations, and add the merged area
     in their place."""
     merged_cluster_id = min(chosen_candidate.area_id_a, chosen_candidate.area_id_b)
-    area_a = subcounty_areas[chosen_candidate.area_id_a]
-    area_b = subcounty_areas[chosen_candidate.area_id_b]
+    area_a = census_tract_aggregations[chosen_candidate.area_id_a]
+    area_b = census_tract_aggregations[chosen_candidate.area_id_b]
     merged_population = area_a.population + area_b.population
     merged_county = combine_county_values(area_a.county, area_b.county)
 
@@ -576,10 +576,10 @@ def apply_merge(
         "ClusterID",
     ] = merged_cluster_id
 
-    del subcounty_areas[chosen_candidate.area_id_a]
-    if chosen_candidate.area_id_b in subcounty_areas:
-        del subcounty_areas[chosen_candidate.area_id_b]
-    subcounty_areas[merged_cluster_id] = SubcountyArea(
+    del census_tract_aggregations[chosen_candidate.area_id_a]
+    if chosen_candidate.area_id_b in census_tract_aggregations:
+        del census_tract_aggregations[chosen_candidate.area_id_b]
+    census_tract_aggregations[merged_cluster_id] = CensusTractAggregation(
         cluster_id=merged_cluster_id,
         shape=merged_shape,
         population=merged_population,
@@ -607,23 +607,23 @@ def run_hierarchical_merge(
     anyway as the closest count actually reachable, rather than silently
     stopping without one."""
     coordinate_reference_system = tract_geodata.crs
-    subcounty_areas, tract_crosswalk = build_initial_areas_and_crosswalk(tract_geodata)
+    census_tract_aggregations, tract_crosswalk = build_initial_areas_and_crosswalk(tract_geodata)
     merge_diagnostics: list[dict] = []
 
     while True:
-        current_area_count = len(subcounty_areas)
+        current_area_count = len(census_tract_aggregations)
         is_target_count = current_area_count in AGGREGATION_TARGET_COUNTS
 
         if is_target_count:
             save_snapshot(
-                subcounty_areas, tract_crosswalk, f"Subcounty{county_mode}{current_area_count}",
+                census_tract_aggregations, tract_crosswalk, f"CensusTractAggregation{county_mode}{current_area_count}",
                 coordinate_reference_system,
             )
 
         if current_area_count <= min(AGGREGATION_TARGET_COUNTS):
             break
 
-        candidate_pairs = find_touching_area_pairs(subcounty_areas, county_mode)
+        candidate_pairs = find_touching_area_pairs(census_tract_aggregations, county_mode)
         if not candidate_pairs:
             if not is_target_count:
                 print(
@@ -632,25 +632,25 @@ def run_hierarchical_merge(
                     "reachable toward whichever smaller target(s) it never reached."
                 )
                 save_snapshot(
-                    subcounty_areas, tract_crosswalk, f"Subcounty{county_mode}{current_area_count}",
+                    census_tract_aggregations, tract_crosswalk, f"CensusTractAggregation{county_mode}{current_area_count}",
                     coordinate_reference_system,
                 )
             break
 
         ranked_all_pairs = rank_candidates_by_similarity(candidate_pairs)
         areas_with_candidate_pairs = {p.area_id_a for p in ranked_all_pairs} | {p.area_id_b for p in ranked_all_pairs}
-        seed_id = select_lowest_population_seed(subcounty_areas, areas_with_candidate_pairs)
+        seed_id = select_lowest_population_seed(census_tract_aggregations, areas_with_candidate_pairs)
 
         seed_candidates = [p for p in ranked_all_pairs if p.area_id_a == seed_id or p.area_id_b == seed_id]
         chosen_candidate = seed_candidates[0]
         merged_shape = shapely.union(
-            subcounty_areas[chosen_candidate.area_id_a].shape,
-            subcounty_areas[chosen_candidate.area_id_b].shape,
+            census_tract_aggregations[chosen_candidate.area_id_a].shape,
+            census_tract_aggregations[chosen_candidate.area_id_b].shape,
         )
 
         # seed_id is always one side of chosen_candidate, so its population is already
         # known without re-checking which side; partner_id is whichever side isn't it.
-        seed_population = subcounty_areas[seed_id].population
+        seed_population = census_tract_aggregations[seed_id].population
         partner_id = (
             chosen_candidate.area_id_b if chosen_candidate.area_id_a == seed_id
             else chosen_candidate.area_id_a
@@ -673,7 +673,7 @@ def run_hierarchical_merge(
         )
 
         merged_max_diff_k = compute_max_diff_k(residential_sites, merged_shape)
-        apply_merge(subcounty_areas, tract_crosswalk, chosen_candidate, merged_shape, merged_max_diff_k)
+        apply_merge(census_tract_aggregations, tract_crosswalk, chosen_candidate, merged_shape, merged_max_diff_k)
 
     return merge_diagnostics
 

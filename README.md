@@ -1,10 +1,10 @@
-# Subcounty Areas — Technical Documentation
+# Census Tract Aggregation — Technical Documentation
 
 ---
 
 ## 1. Purpose
 
-Aggregates census tracts into "subcounty areas" — a geography coarser than a tract, finer
+Aggregates census tracts into "census tract aggregations" — a geography coarser than a tract, finer
 than a county — using only two signals: total population and a residential
 clustering pattern (`MaxDiffK` - based on Ripley's K, §3). Anchoring on those rather than on any specific social
 or economic indicator keeps the result usable as a general-purpose geography.
@@ -28,7 +28,7 @@ pip install geopandas shapely pyproj requests scipy numpy pandas
 ```
 
 ```
-python SubcountyAreas.py
+python CensusTractAggregations.py
 ```
 
 As shipped, both data sources default to Vermont (VCGI's 2020 census tract layer and E911
@@ -38,8 +38,8 @@ field names, `PROJECTED_CRS_EPSG`, `NEIGHBORHOOD_DISTANCES_METERS` if you would 
 different definition for what a neighborhood range is, and `AGGREGATION_TARGET_COUNTS`, 
 since the last two were tuned to Vermont's scale.
 
-Output lands at `~/Desktop/SubcountyAreas/SubcountyAreas.gpkg`, with a merge log at
-`~/Desktop/SubcountyAreas/SubcountyAreas_MergeDiagnostics.csv`.
+Output lands at `~/Desktop/CensusTractAggregations/CensusTractAggregations.gpkg`, with a merge log at
+`~/Desktop/CensusTractAggregations/CensusTractAggregations_MergeDiagnostics.csv`.
 
 ---
 
@@ -150,7 +150,7 @@ every merge, but nothing about an original tract's own data is discarded except 
 Before any merging, the untouched tracts are saved as a `BaseTracts` layer — the original
 tract count is always above the largest target, so it would otherwise never appear in the
 output. From there, each snapshot is two objects in the shared GeoPackage: a spatial layer
-`Subcounty{county_mode}{count}` (`ClusterID`, `ClusterPopulation`, `COUNTY`, `MaxDiffK`) and
+`CensusTractAggregation{county_mode}{count}` (`ClusterID`, `ClusterPopulation`, `COUNTY`, `MaxDiffK`) and
 a non-spatial `{layer_name}_Crosswalk` table.
 
 Every merge drops the area count by exactly 1, so a run either lands on a target exactly or
@@ -165,7 +165,7 @@ reached, as the stand-in for every smaller target that run can no longer reach.
 
 For every merge, before narrowing to the seed's own neighbors, the full map-wide ranking
 is already available — exactly what a map-wide best-match rule would have chosen from
-instead. Each row of `SubcountyAreas_MergeDiagnostics.csv` records the chosen pair's
+instead. Each row of `CensusTractAggregations_MergeDiagnostics.csv` records the chosen pair's
 `population_difference`, `clustering_difference`, and `similarity_score`, plus each one's
 **percentile** against every pair available that round (including the chosen pair itself):
 
