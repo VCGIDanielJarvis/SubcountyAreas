@@ -5,9 +5,12 @@
 ## 1. Purpose
 
 Aggregates census tracts into "census tract aggregations" — a geography coarser than a tract, finer
-than a county — using only two signals: total population and a residential
-clustering pattern (`MaxDiffK` - based on Ripley's K, §3). Anchoring on those rather than on any specific social
-or economic indicator keeps the result usable as a general-purpose geography.
+than a county — using only two signals: total population and a residential clustering pattern 
+(based on Ripley's K, §3). Anchoring on those rather than on any specific social or economic 
+indicator keeps the result usable as a general-purpose geography. These are structural rather than 
+demographic variables - where and how many rather than explicitly who. This is not a perfect method, 
+as demographics can indeed shape structural distribution (eg: suburban expansion), but this is less 
+loaded and more generally usable than deriving aggregations directly from specific demographics.
 
 Starting from every original tract, the script repeatedly merges the current
 lowest-population area into its most similar *touching* neighbor, until the map reaches a
