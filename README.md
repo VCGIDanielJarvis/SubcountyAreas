@@ -22,7 +22,8 @@ pattern, until the map reaches a target area count. It runs this twice:
 Each run is snapshotted every time the area count passes through one of
 `AGGREGATION_TARGET_COUNTS = [60, 100, 150]` (or the closest count it actually
 reaches, §3.5). These counts are near equal-interval distances between the Vermont
-county count (14) and the Vermont census tract count in 2020 (193).
+county count (14) and the Vermont census tract count in 2020 (193). You should change
+these counts to match your state's range from tract count to county count.
 
 ### Requirements
 
