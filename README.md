@@ -107,8 +107,11 @@ undercount points near the boundary. Instead:
    locally-dense tract's density out to 3 km, reading it as spuriously dispersed.
 
 **Limitations:** at the outer edge of the downloaded site data (a state boundary), there's
-no data across the line to correct with — real, unavoidable edge effect there. And
-`MaxDiffK` always scores tracts against *present-day* residential locations, regardless of
+no data across the line to correct with — real, unavoidable edge effect there. The likely
+direction of that bias is toward understating clustering, not overstating it: real homes
+just across the line are only ever missing from the count, never mistakenly added, so a
+tract hugging the state line will tend to read a bit more dispersed than it actually is.
+And `MaxDiffK` always scores tracts against *present-day* residential locations, regardless of
 which vintage `TRACT_SERVICE_URL` points at — worth noting before pairing this script with
 historical tract geometry.
 
