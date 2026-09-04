@@ -12,9 +12,9 @@ demographic variables - where and how many rather than explicitly who. This is n
 as demographics can indeed shape structural distribution (eg: suburban expansion), but this is less 
 loaded and more generally usable than deriving aggregations directly from specific demographics.
 
-Starting from every original tract, the script repeatedly merges the current
-lowest-population area into its most similar *touching* neighbor, until the map reaches a
-target area count. It runs this twice:
+Starting from every original tract, the script repeatedly merges the current lowest-population area 
+into whichever touching neighbor best matches it on both population and residential clustering 
+pattern, until the map reaches a target area count. It runs this twice:
 
 - **Counties** — a merge may never cross a county line.
 - **NoCounties** — any two touching areas may merge, county lines included.
